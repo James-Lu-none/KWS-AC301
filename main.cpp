@@ -157,6 +157,13 @@ vector<uint8_t> getdata(const string& commandType) {
     }
     uint16_t startAddr = it->second;
     vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x03, startAddr, 1);
+    vector<uint8_t> response(15);
+    fd_set readfds;
+    struct timeval timeout;
+    FD_ZERO(&readfds);
+    FD_SET(fd, &readfds);
+    timeout.tv_sec = 2;
+    timeout.tv_usec = 0;
 
     for (int i=0; i < retryTime; i++) {
         tcflush(fd, TCIOFLUSH);
@@ -165,15 +172,6 @@ vector<uint8_t> getdata(const string& commandType) {
             cerr << "!! Error writing to serial port" << endl;
             continue;
         }
-
-        vector<uint8_t> response(15);
-        fd_set readfds;
-        struct timeval timeout;
-        FD_ZERO(&readfds);
-        FD_SET(fd, &readfds);
-        timeout.tv_sec = 2;
-        timeout.tv_usec = 0;
-
         int selectResult = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
         if (!(selectResult > 0 && FD_ISSET(fd, &readfds))) {
             cerr << "!! Timeout" << endl;
