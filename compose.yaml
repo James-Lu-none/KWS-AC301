@@ -1,0 +1,8 @@
+services:
+  power-meter-reader:
+    image: power-meter-reader:latest
+    build:
+      context: .
+      dockerfile: dockerfile
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
