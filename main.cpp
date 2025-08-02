@@ -16,6 +16,10 @@ termios tty{};
 const char* device = "/dev/ttyUSB0";
 uint8_t slaveAddr = 0x02;
 uint8_t retryTime = 3;
+uint8_t timeoutSeconds = 2;
+
+fd_set readfds;
+struct timeval timeout;
 int fd = open(device, O_RDWR | O_NOCTTY | O_SYNC);
 
 void printHex(const vector<uint8_t>& data);
@@ -92,6 +96,11 @@ int main() {
     tty.c_cflag &= ~(PARENB | PARODD);
     tty.c_cflag &= ~CSTOPB;
     tty.c_cflag &= ~CRTSCTS;
+
+    FD_ZERO(&readfds);
+    FD_SET(fd, &readfds);
+    timeout.tv_sec = timeoutSeconds;
+    timeout.tv_usec = 0;
     if (tcsetattr(fd, TCSANOW, &tty) != 0) {
         cerr << "Error setting tty attributes" << endl;
         close(fd);
@@ -156,14 +165,9 @@ vector<uint8_t> getdata(const string& commandType) {
         return {};
     }
     uint16_t startAddr = it->second;
+
     vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x03, startAddr, 1);
     vector<uint8_t> response(15);
-    fd_set readfds;
-    struct timeval timeout;
-    FD_ZERO(&readfds);
-    FD_SET(fd, &readfds);
-    timeout.tv_sec = 2;
-    timeout.tv_usec = 0;
 
     for (int i=0; i < retryTime; i++) {
         tcflush(fd, TCIOFLUSH);
