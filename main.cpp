@@ -18,6 +18,7 @@ int fd = open(device, O_RDWR | O_NOCTTY | O_SYNC);
 void printHex(const vector<uint8_t>& data);
 vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, uint16_t startAddr, uint16_t numRegs);
 vector<uint8_t> getdata(const string& commandType);
+bool crc_check(uint8_t* message, size_t size);
 
 unordered_map<string, uint16_t> commandTypeToStartAddr = {
     {"RATED_VOLTAGE", 0x010E},
@@ -56,8 +57,8 @@ unordered_map<string, uint16_t> commandTypeToStartAddr = {
     {"RTC_CLOCK_DAY", 0x2A0E},
     {"RTC_CLOCK_HOUR", 0x2B0E},
     {"RTC_CLOCK_MINUTE", 0x2C0E},
-    {"RTC_CLOCK_SECOND", 0x2D0E}
-    // {"WRITE_PARAMETER_PASSWORD", 0x000E}
+    {"RTC_CLOCK_SECOND", 0x2D0E},
+    {"WRITE_PARAMETER_PASSWORD", 0x000E}
 };
 
 int main() {
@@ -94,20 +95,39 @@ int main() {
         return 1;
     }
     cout << "TTY attributes configured successfully." << endl;
-    
+    vector<uint8_t> data;
     // iterate through command types and get data
     for (const auto& command : commandTypeToStartAddr) {
         cout << "Command: " << command.first << endl;
-        vector<uint8_t> data = getdata(command.first);
-        if (!data.empty()) {
-            cout << "Responded" << ": ";
-            printHex(data);
-        }
+        do{
+            data = getdata(command.first);
+            if (!data.empty()) {
+                cout << "Responded" << ": ";
+                printHex(data);
+            }
+        }while(crc_check(data.data(), data.size()) == false);
     }
 
     close(fd);
     cout << "Closed " << device << " successfully." << endl;
     return 0;
+}
+
+bool crc_check(uint8_t* message, size_t size) {
+    if (size < 2) return false; // CRC requires at least 2 bytes
+    uint16_t crc = 0xFFFF;
+    for (size_t pos = 0; pos < size - 2; pos++) {
+        crc ^= message[pos];
+        for (int i = 8; i != 0; i--) {
+            if ((crc & 0x0001) != 0) {
+                crc >>= 1;
+                crc ^= 0xA001;
+            } else {
+                crc >>= 1;
+            }
+        }
+    }
+    return (crc == (message[size - 2] | (message[size - 1] << 8)));
 }
 
 vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, uint16_t startAddr, uint16_t numRegs) {
