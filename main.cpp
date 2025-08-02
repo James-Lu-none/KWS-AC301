@@ -95,7 +95,6 @@ int main() {
     }
     cout << "TTY attributes configured successfully." << endl;
     
-    // try with 
     // iterate through command types and get data
     for (const auto& command : commandTypeToStartAddr) {
         cout << "Command: " << command.first << endl;
@@ -103,11 +102,11 @@ int main() {
         if (!data.empty()) {
             cout << "Responded" << ": ";
             printHex(data);
-        } else {
-            cout << "No data received for " << command.first << endl;
         }
     }
 
+    close(fd);
+    cout << "Closed " << device << " successfully." << endl;
     return 0;
 }
 
@@ -139,15 +138,16 @@ vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, u
 vector<uint8_t> getdata(const string& commandType) {
     auto it = commandTypeToStartAddr.find(commandType);
     if (it == commandTypeToStartAddr.end()) {
-        cerr << "Invalid command type: " << commandType << endl;
+        cerr << "!! Invalid command type: " << commandType << endl;
         return {};
     }
     uint16_t startAddr = it->second;
     vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x03, startAddr, 1);
 
+    tcflush(fd, TCIOFLUSH);
     ssize_t bytesWritten = write(fd, request.data(), request.size());
     if (bytesWritten != static_cast<ssize_t>(request.size())) {
-        cerr << "Error writing to serial port" << endl;
+        cerr << "!! Error writing to serial port" << endl;
         return {};
     }
 
@@ -163,13 +163,13 @@ vector<uint8_t> getdata(const string& commandType) {
     if (selectResult > 0 && FD_ISSET(fd, &readfds)) {
         int bytesRead = read(fd, response.data(), response.size());
         if (bytesRead < 0) {
-            cerr << "Error reading from serial port" << endl;
+            cerr << "!! Error reading from serial port" << endl;
             return {};
         }
         response.resize(bytesRead);
         return response;
     } else {
-        cerr << "Timeout or error waiting for response from serial port" << endl;
+        cerr << "!! Timeout" << endl;
         return {};
     }
 }
