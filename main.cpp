@@ -8,11 +8,14 @@
 #include <iomanip>
 #include <unordered_map>
 #include <string>
+#include <chrono>
+#include <thread>
 using namespace std;
 
 termios tty{};
 const char* device = "/dev/ttyUSB0";
 uint8_t slaveAddr = 0x02;
+uint8_t retryTime = 3;
 int fd = open(device, O_RDWR | O_NOCTTY | O_SYNC);
 
 void printHex(const vector<uint8_t>& data);
@@ -95,18 +98,9 @@ int main() {
         return 1;
     }
     cout << "TTY attributes configured successfully." << endl;
-    vector<uint8_t> data;
-    // iterate through command types and get data
-    for (const auto& command : commandTypeToStartAddr) {
-        cout << "Command: " << command.first << endl;
-        do{
-            data = getdata(command.first);
-            if (!data.empty()) {
-                cout << "Responded" << ": ";
-                printHex(data);
-            }
-        }while(crc_check(data.data(), data.size()) == false);
-    }
+
+    printHex(getdata("WRITE_PARAMETER_PASSWORD"));
+    this_thread::sleep_for(chrono::milliseconds(1000));
 
     close(fd);
     cout << "Closed " << device << " successfully." << endl;
@@ -164,34 +158,40 @@ vector<uint8_t> getdata(const string& commandType) {
     uint16_t startAddr = it->second;
     vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x03, startAddr, 1);
 
-    tcflush(fd, TCIOFLUSH);
-    ssize_t bytesWritten = write(fd, request.data(), request.size());
-    if (bytesWritten != static_cast<ssize_t>(request.size())) {
-        cerr << "!! Error writing to serial port" << endl;
-        return {};
-    }
+    for (int i=0; i < retryTime; i++) {
+        tcflush(fd, TCIOFLUSH);
+        ssize_t bytesWritten = write(fd, request.data(), request.size());
+        if (bytesWritten != static_cast<ssize_t>(request.size())) {
+            cerr << "!! Error writing to serial port" << endl;
+            continue;
+        }
 
-    vector<uint8_t> response(256);
-    fd_set readfds;
-    struct timeval timeout;
-    FD_ZERO(&readfds);
-    FD_SET(fd, &readfds);
-    timeout.tv_sec = 2;
-    timeout.tv_usec = 0;
+        vector<uint8_t> response(15);
+        fd_set readfds;
+        struct timeval timeout;
+        FD_ZERO(&readfds);
+        FD_SET(fd, &readfds);
+        timeout.tv_sec = 2;
+        timeout.tv_usec = 0;
 
-    int selectResult = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
-    if (selectResult > 0 && FD_ISSET(fd, &readfds)) {
+        int selectResult = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
+        if (!(selectResult > 0 && FD_ISSET(fd, &readfds))) {
+            cerr << "!! Timeout" << endl;
+            continue;
+        }
         int bytesRead = read(fd, response.data(), response.size());
         if (bytesRead < 0) {
             cerr << "!! Error reading from serial port" << endl;
-            return {};
+            continue;
         }
         response.resize(bytesRead);
+        if (!(crc_check(response.data(), response.size()))) {
+            cerr << "!! crc check failed" << endl;
+            continue;
+        }
         return response;
-    } else {
-        cerr << "!! Timeout" << endl;
-        return {};
     }
+    return {};
 }
 
 void printHex(const vector<uint8_t>& data) {
