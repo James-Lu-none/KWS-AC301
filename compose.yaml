@@ -11,6 +11,7 @@ services:
       - /dev/ttyUSB0:/dev/ttyUSB0
     logging:
       driver: "json-file"
+    restart: always
       
   # take logs from power-meter-reader and send to Loki
   promtail:
