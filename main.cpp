@@ -106,7 +106,7 @@ int main() {
     }
     cout << "TTY attributes configured successfully." << endl;
 
-    printHex(getdata("WRITE_PARAMETER_PASSWORD"),4);
+    printHex(getdata("WRITE_PARAMETER_PASSWORD",4));
     this_thread::sleep_for(chrono::milliseconds(1000));
 
     close(fd);
