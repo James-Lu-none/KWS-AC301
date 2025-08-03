@@ -15,16 +15,15 @@ using namespace std;
 termios tty{};
 const char* device = "/dev/ttyUSB0";
 uint8_t slaveAddr = 0x02;
-uint8_t retryTime = 3;
-uint8_t timeoutSeconds = 2;
+uint8_t retryTime = 100;
+uint8_t timeoutSeconds = 10;
 
-fd_set readfds;
 struct timeval timeout;
-int fd = open(device, O_RDWR | O_NOCTTY | O_SYNC);
+int fd;
 
 void printHex(const vector<uint8_t>& data);
 vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, uint16_t startAddr, uint16_t numRegs);
-vector<uint8_t> getdata(const string& commandType);
+vector<uint8_t> getdata(const string& commandType, uint16_t numRegs);
 bool crc_check(uint8_t* message, size_t size);
 
 unordered_map<string, uint16_t> commandTypeToStartAddr = {
@@ -69,6 +68,7 @@ unordered_map<string, uint16_t> commandTypeToStartAddr = {
 };
 
 int main() {
+    fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
     if (fd < 0) {
         cerr << "Error opening " << device << endl;
         return 1;
@@ -89,16 +89,14 @@ int main() {
     tty.c_iflag &= ~IGNBRK;
     tty.c_lflag = 0;
     tty.c_oflag = 0;
-    tty.c_cc[VMIN]  = 1;
-    tty.c_cc[VTIME] = 5;
+    tty.c_cc[VMIN]  = 5;
+    tty.c_cc[VTIME] = 1;
     tty.c_iflag &= ~(IXON | IXOFF | IXANY);
     tty.c_cflag |= (CLOCAL | CREAD);
     tty.c_cflag &= ~(PARENB | PARODD);
     tty.c_cflag &= ~CSTOPB;
     tty.c_cflag &= ~CRTSCTS;
 
-    FD_ZERO(&readfds);
-    FD_SET(fd, &readfds);
     timeout.tv_sec = timeoutSeconds;
     timeout.tv_usec = 0;
     if (tcsetattr(fd, TCSANOW, &tty) != 0) {
@@ -108,7 +106,7 @@ int main() {
     }
     cout << "TTY attributes configured successfully." << endl;
 
-    printHex(getdata("WRITE_PARAMETER_PASSWORD"));
+    printHex(getdata("WRITE_PARAMETER_PASSWORD"),4);
     this_thread::sleep_for(chrono::milliseconds(1000));
 
     close(fd);
@@ -158,7 +156,7 @@ vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, u
     return req;
 }
 
-vector<uint8_t> getdata(const string& commandType) {
+vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
     auto it = commandTypeToStartAddr.find(commandType);
     if (it == commandTypeToStartAddr.end()) {
         cerr << "!! Invalid command type: " << commandType << endl;
@@ -166,27 +164,30 @@ vector<uint8_t> getdata(const string& commandType) {
     }
     uint16_t startAddr = it->second;
 
-    vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x03, startAddr, 1);
-    vector<uint8_t> response(15);
-
+    vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x03, startAddr, numRegs);
+    uint16_t expectedSize = 5 + numRegs * 2; // 5 bytes for header + 2 bytes per register
     for (int i=0; i < retryTime; i++) {
-        tcflush(fd, TCIOFLUSH);
+        vector<uint8_t> response(expectedSize);
+        tcflush(fd, TCIFLUSH);
         ssize_t bytesWritten = write(fd, request.data(), request.size());
         if (bytesWritten != static_cast<ssize_t>(request.size())) {
             cerr << "!! Error writing to serial port" << endl;
             continue;
         }
+        tcdrain(fd);
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(fd, &readfds);
         int selectResult = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
         if (!(selectResult > 0 && FD_ISSET(fd, &readfds))) {
             cerr << "!! Timeout" << endl;
             continue;
         }
         int bytesRead = read(fd, response.data(), response.size());
-        if (bytesRead < 0) {
+        if (bytesRead < 0 || bytesRead != expectedSize) {
             cerr << "!! Error reading from serial port" << endl;
             continue;
         }
-        response.resize(bytesRead);
         if (!(crc_check(response.data(), response.size()))) {
             cerr << "!! crc check failed" << endl;
             continue;
