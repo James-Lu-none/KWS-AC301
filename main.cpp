@@ -10,6 +10,9 @@
 #include <string>
 #include <chrono>
 #include <thread>
+#include <spdlog/spdlog.h>
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 using namespace std;
 
 termios tty{};
