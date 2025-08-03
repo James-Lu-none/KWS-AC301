@@ -123,8 +123,17 @@ int main() {
     }
     cout << "TTY attributes configured successfully." << endl;
     while(true){
-        cout << "Reading data..." << endl;
-        printHex(getdata("CURRENT_VOLTAGE",16));
+        vector<uint8_t> data = getdata("CURRENT_VOLTAGE",16);
+        json j = {
+            {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
+            {"CURRENT_VOLTAGE", (data[3] << 8 | data[4])/10.4f},
+            {"CURRENT_CURRENT", (data[5] << 8 | data[6])/1000.4f},
+            {"CURRENT_ACTIVE_POWER", (data[9] << 8 | data[10])/10.4f},
+            {"CURRENT_APPARENT_POWER", (data[17] << 8 | data[18])/10.4f},
+            {"CURRENT_TEMPERATURE", data[27] << 8 | data[28]},
+            {"CURRENT_POWER_FACTOR", (data[33] << 8 | data[34])/100.4f}
+        };
+        spdlog::info("{}", j.dump(4));
     }
 
     close(fd);
@@ -177,7 +186,7 @@ vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, u
 vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
     auto it = commandTypeToStartAddr.find(commandType);
     if (it == commandTypeToStartAddr.end()) {
-        cerr << "!! Invalid command type: " << commandType << endl;
+        spdlog::error("Invalid command type: {}", commandType);
         return {};
     }
     uint16_t startAddr = it->second;
@@ -189,7 +198,7 @@ vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
         tcflush(fd, TCIFLUSH);
         ssize_t bytesWritten = write(fd, request.data(), request.size());
         if (bytesWritten != static_cast<ssize_t>(request.size())) {
-            cerr << "!! Error writing to serial port" << endl;
+            spdlog::error("Error writing to serial port");
             continue;
         }
         
@@ -204,18 +213,18 @@ vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
             timeout.tv_usec = 500000;
             int selectResult = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
             if (!(selectResult > 0 && FD_ISSET(fd, &readfds))) {
-                cerr << "!! Timeout" << endl;
+                spdlog::error("Timeout or error in select");
                 break;
             }
             int bytesRead = read(fd, response.data() + totalBytesRead, expectedSize - totalBytesRead);
             if (bytesRead < 0) {
-                cerr << "!! Error reading from serial port" << endl;
+                spdlog::error("Error reading from serial port");
                 break;
             }
             totalBytesRead += bytesRead;
         }
         if (!(crc_check(response.data(), response.size()))) {
-            cerr << "!! crc check failed" << endl;
+            spdlog::error("CRC check failed");
             continue;
         }
         return response;
