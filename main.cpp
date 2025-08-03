@@ -18,7 +18,6 @@ uint8_t slaveAddr = 0x02;
 uint8_t retryTime = 100;
 uint8_t timeoutSeconds = 10;
 
-struct timeval timeout;
 int fd;
 
 void printHex(const vector<uint8_t>& data);
@@ -96,17 +95,17 @@ int main() {
     tty.c_cflag &= ~(PARENB | PARODD);
     tty.c_cflag &= ~CSTOPB;
     tty.c_cflag &= ~CRTSCTS;
-
-    timeout.tv_sec = timeoutSeconds;
-    timeout.tv_usec = 0;
+    
     if (tcsetattr(fd, TCSANOW, &tty) != 0) {
         cerr << "Error setting tty attributes" << endl;
         close(fd);
         return 1;
     }
     cout << "TTY attributes configured successfully." << endl;
-
-    printHex(getdata("WRITE_PARAMETER_PASSWORD",4));
+    while(true){
+        printHex(getdata("WRITE_PARAMETER_PASSWORD",2));
+    }
+    
     this_thread::sleep_for(chrono::milliseconds(1000));
 
     close(fd);
@@ -178,6 +177,11 @@ vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
+
+        struct timeval timeout;
+        timeout.tv_sec = 3;
+        timeout.tv_usec = 0;
+
         int selectResult = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
         if (!(selectResult > 0 && FD_ISSET(fd, &readfds))) {
             cerr << "!! Timeout" << endl;
