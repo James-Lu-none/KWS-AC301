@@ -61,6 +61,25 @@ unordered_map<string, uint16_t> commandTypeToStartAddr = {
     {"RTC_CLOCK_HOUR", 0x2B0E},
     {"RTC_CLOCK_MINUTE", 0x2C0E},
     {"RTC_CLOCK_SECOND", 0x2D0E},
+
+    {"CURRENT_VOLTAGE", 0x000E},
+    {"CURRENT_CURRENT", 0x000F},
+    {"0010", 0x0010}, // 0x0000 none
+    {"CURRENT_ACTIVE_POWER", 0x0011},
+    {"0012", 0x0012}, // 0x0000 none
+    {"0013", 0x0013}, // 0x5c43 idk
+    {"0014", 0x0014}, // 0x58d4 idk
+    {"CURRENT_APPARENT_POWER", 0x0015},
+    {"0016", 0x0016}, // 0x0000 none
+    {"0017", 0x0017}, // maybe time
+    {"0018", 0x0018}, // 0x0000 none
+    {"0019", 0x0019}, // maybe time
+    {"CURRENT_TEMPERATURE", 0x001a},
+    {"001b", 0x001b}, // 0xdb99 idk
+    {"001c", 0x001c}, // 0x0000 none
+    {"CURRENT_POWER_FACTOR", 0x001d},
+    {"001e", 0x001e}, // current (duplicate)
+    {"001f", 0x001f}, // 0xc3c0 idk
     {"WRITE_PARAMETER_PASSWORD", 0x000E}
 };
 
@@ -101,7 +120,8 @@ int main() {
     }
     cout << "TTY attributes configured successfully." << endl;
     while(true){
-        printHex(getdata("WRITE_PARAMETER_PASSWORD",2));
+        cout << "Reading data..." << endl;
+        printHex(getdata("CURRENT_VOLTAGE",16));
     }
 
     close(fd);
