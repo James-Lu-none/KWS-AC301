@@ -1,4 +1,10 @@
 [modbus doc](https://www.modbustools.com/modbus.html#function16)
+[termios.h](https://www.ibm.com/docs/en/aix/7.3.0?topic=files-termiosh-file)
+[input modes](https://www.gnu.org/software/libc/manual/html_node/Input-Modes.html)
+[fd](https://blog.csdn.net/yushuaigee/article/details/107883964)
+[termios.h cdsn](https://blog.csdn.net/Flag_ing/article/details/125644852)
+[termios.h sourcecode](https://github.com/python/cpython/blob/main/Modules/termios.c#L293)
+[nlohmann](https://github.com/nlohmann/json)
 
 ## filter
 ```log
@@ -61,3 +67,8 @@ A RX payload: 02030402fc000008bb
 A TX payload: 020300170002743c
 A RX payload: 02030442f900000d7a
 ```
+
+
+
+
+level=error ts=2025-08-03T11:18:11.247756862Z caller=client.go:430 component=client host=10.0.1.100:3100 msg="final error sending batch" status=400 tenant= error="server returned HTTP status 400 Bad Request (400): entry with timestamp 2025-08-01 16:43:38.854444845 +0000 UTC ignored, reason: 'entry too far behind, entry timestamp is: 2025-08-01T16:43:38Z, oldest acceptable timestamp is: 2025-08-03T10:18:03Z',"
