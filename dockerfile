@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY . .
+COPY main.cpp .
+COPY Makefile .
 
 RUN make
 
