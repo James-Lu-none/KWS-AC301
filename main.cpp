@@ -126,6 +126,7 @@ int main() {
         vector<uint8_t> data = getdata("CURRENT_VOLTAGE",16);
         json j = {
             {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
+            {"LEVEL", "info"},
             {"CURRENT_VOLTAGE", (data[3] << 8 | data[4])/10.4f},
             {"CURRENT_CURRENT", (data[5] << 8 | data[6])/1000.4f},
             {"CURRENT_ACTIVE_POWER", (data[9] << 8 | data[10])/10.4f},
@@ -133,7 +134,7 @@ int main() {
             {"CURRENT_TEMPERATURE", data[27] << 8 | data[28]},
             {"CURRENT_POWER_FACTOR", (data[33] << 8 | data[34])/100.4f}
         };
-        spdlog::info("{}", j.dump(4));
+        cout << j << endl;
     }
 
     close(fd);
@@ -183,6 +184,13 @@ vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, u
     return req;
 }
 
+void logError(const string& message) {
+    json j = {
+        {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
+        {"LEVEL", "error"},
+        {"MESSAGE", message}
+    };
+}
 vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
     auto it = commandTypeToStartAddr.find(commandType);
     if (it == commandTypeToStartAddr.end()) {
@@ -213,18 +221,18 @@ vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
             timeout.tv_usec = 500000;
             int selectResult = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
             if (!(selectResult > 0 && FD_ISSET(fd, &readfds))) {
-                spdlog::error("Timeout or error in select");
+                logError("Timeout or error in select");
                 break;
             }
             int bytesRead = read(fd, response.data() + totalBytesRead, expectedSize - totalBytesRead);
             if (bytesRead < 0) {
-                spdlog::error("Error reading from serial port");
+                logError("Error reading from serial port");
                 break;
             }
             totalBytesRead += bytesRead;
         }
         if (!(crc_check(response.data(), response.size()))) {
-            spdlog::error("CRC check failed");
+            logError("CRC check failed");
             continue;
         }
         return response;
