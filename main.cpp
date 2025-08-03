@@ -16,8 +16,6 @@ termios tty{};
 const char* device = "/dev/ttyUSB0";
 uint8_t slaveAddr = 0x02;
 uint8_t retryTime = 100;
-uint8_t timeoutSeconds = 10;
-
 int fd;
 
 void printHex(const vector<uint8_t>& data);
@@ -105,8 +103,6 @@ int main() {
     while(true){
         printHex(getdata("WRITE_PARAMETER_PASSWORD",2));
     }
-    
-    this_thread::sleep_for(chrono::milliseconds(1000));
 
     close(fd);
     cout << "Closed " << device << " successfully." << endl;
@@ -165,7 +161,7 @@ vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
 
     vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x03, startAddr, numRegs);
     uint16_t expectedSize = 5 + numRegs * 2; // 5 bytes for header + 2 bytes per register
-    for (int i=0; i < retryTime; i++) {
+    for (uint16_t i=0; i < retryTime; i++) {
         vector<uint8_t> response(expectedSize);
         tcflush(fd, TCIFLUSH);
         ssize_t bytesWritten = write(fd, request.data(), request.size());
@@ -173,24 +169,27 @@ vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
             cerr << "!! Error writing to serial port" << endl;
             continue;
         }
-        tcdrain(fd);
-        fd_set readfds;
-        FD_ZERO(&readfds);
-        FD_SET(fd, &readfds);
-
-        struct timeval timeout;
-        timeout.tv_sec = 3;
-        timeout.tv_usec = 0;
-
-        int selectResult = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
-        if (!(selectResult > 0 && FD_ISSET(fd, &readfds))) {
-            cerr << "!! Timeout" << endl;
-            continue;
-        }
-        int bytesRead = read(fd, response.data(), response.size());
-        if (bytesRead < 0 || bytesRead != expectedSize) {
-            cerr << "!! Error reading from serial port" << endl;
-            continue;
+        
+        int totalBytesRead = 0;
+        while (totalBytesRead < expectedSize) {
+            tcdrain(fd);
+            fd_set readfds;
+            FD_ZERO(&readfds);
+            FD_SET(fd, &readfds);
+            struct timeval timeout;
+            timeout.tv_sec = 0;
+            timeout.tv_usec = 500000;
+            int selectResult = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
+            if (!(selectResult > 0 && FD_ISSET(fd, &readfds))) {
+                cerr << "!! Timeout" << endl;
+                break;
+            }
+            int bytesRead = read(fd, response.data() + totalBytesRead, expectedSize - totalBytesRead);
+            if (bytesRead < 0) {
+                cerr << "!! Error reading from serial port" << endl;
+                break;
+            }
+            totalBytesRead += bytesRead;
         }
         if (!(crc_check(response.data(), response.size()))) {
             cerr << "!! crc check failed" << endl;
