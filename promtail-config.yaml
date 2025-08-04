@@ -24,19 +24,10 @@ scrape_configs:
         target_label: container
         
     pipeline_stages:
-      - regex:
-          expression: '^\[(?P<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\] \[(?P<level>\w+)\] (?P<json_data>{.*})'
-      - timestamp:
-          source: ts
-          format: '2006-01-02 15:04:05.000'
       - json:
           expressions:
-            CURRENT_ACTIVE_POWER: CURRENT_ACTIVE_POWER
-            CURRENT_APPARENT_POWER: CURRENT_APPARENT_POWER
-            CURRENT_CURRENT: CURRENT_CURRENT
-            CURRENT_POWER_FACTOR: CURRENT_POWER_FACTOR
-            CURRENT_TEMPERATURE: CURRENT_TEMPERATURE
-            CURRENT_VOLTAGE: CURRENT_VOLTAGE
+            LEVEL: LEVEL
             TIMESTAMP: TIMESTAMP
-      - labels:
-          level:
+      - timestamp:
+          source: TIMESTAMP
+          format: UnixNs
