@@ -137,20 +137,28 @@ int main() {
     //     };
     //     cout << j << endl;
     // }
-    while(true){
-        vector<vector<uint8_t>> alldata;
-        for(uint32_t i=0;i<10;i++){
-            uint32_t offset = i * 16;
-            vector<uint8_t> data = getDataByStartAddr(offset,16);
-            data.insert(data.begin(), offset&0xFF);
-            data.insert(data.begin(), offset>>8);
-            alldata.push_back(data);
-        }
-        for (const auto& data : alldata) {
-            printHex(data);
-        }
-        cout << "----------------------------------------" << endl;
+    // while(true){
+    //     vector<vector<uint8_t>> alldata;
+    //     for(uint32_t i=0;i<10;i++){
+    //         uint32_t offset = i * 16;
+    //         vector<uint8_t> data = getDataByStartAddr(offset,16);
+    //         data.insert(data.begin(), offset&0xFF);
+    //         data.insert(data.begin(), offset>>8);
+    //         alldata.push_back(data);
+    //     }
+    //     for (const auto& data : alldata) {
+    //         printHex(data);
+    //     }
+    //     cout << "----------------------------------------" << endl;
+    // }
+    for(uint32_t i=0;i<4096;i++){
+        uint32_t offset = i * 16;
+        vector<uint8_t> data = getDataByStartAddr(offset,16);
+        data.insert(data.begin(), offset&0xFF);
+        data.insert(data.begin(), offset>>8);
+        printHex(data);
     }
+
 
 
     close(fd);
