@@ -125,6 +125,9 @@ int main() {
     cout << "TTY attributes configured successfully." << endl;
     while(true){
         vector<uint8_t> data = getDataByCommand("CURRENT_VOLTAGE",16);
+        if (data.empty()) {
+            continue;
+        }
         json j = {
             {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
             {"LEVEL", "info"},
@@ -191,7 +194,8 @@ void logError(const string& message) {
         {"LEVEL", "error"},
         {"MESSAGE", message}
     };
-    cout << j.dump() << endl;
+    // cout << j.dump() << endl;
+    return;
 }
 vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs) {
     auto it = commandTypeToStartAddr.find(commandType);
@@ -204,7 +208,7 @@ vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs) {
 }
 
 vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs) {
-    vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x02, startAddr, numRegs);
+    vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x03, startAddr, numRegs);
     uint16_t expectedSize = 5 + numRegs * 2; // 5 bytes for header + 2 bytes per register
     vector<uint8_t> response(expectedSize);
     for (uint16_t i=0; i < retryTime; i++) {
@@ -240,7 +244,7 @@ vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs) {
             if (totalBytesRead > 3){
                 if (response[1] != 0x03) {
                     message = "Invalid response from slave";
-                    return response;
+                    break;
                 }
             }
         }
