@@ -53,8 +53,8 @@ unordered_map<string, uint16_t> commandTypeToStartAddr = {
     {"CHANNEL_ENERGY_LOW", 0x170E},
     {"CHANNEL_ENERGY_HIGH", 0x180E},
     {"OPERATING_MINUTES", 0x190E},
-    {"CURRENT_EXTERNAL_TEMPERATURE", 0x1A0E},
-    {"CURRENT_INTERNAL_TEMPERATURE", 0x1B0E},
+    {"EXTERNAL_TEMPERATURE", 0x1A0E},
+    {"INTERNAL_TEMPERATURE", 0x1B0E},
     {"RTC_BATTERY_VOLTAGE", 0x1C0E},
     {"POWER_FACTOR", 0x1D0E},
     {"VOLTAGE_FREQUENCY", 0x1E0E},
@@ -66,22 +66,22 @@ unordered_map<string, uint16_t> commandTypeToStartAddr = {
     {"RTC_CLOCK_MINUTE", 0x2C0E},
     {"RTC_CLOCK_SECOND", 0x2D0E},
 
-    {"CURRENT_VOLTAGE", 0x000E},
-    {"CURRENT_CURRENT", 0x000F},
+    {"VOLTAGE", 0x000E},
+    {"CURRENT", 0x000F},
     {"0010", 0x0010}, // 0x0000 none
-    {"CURRENT_ACTIVE_POWER", 0x0011},
+    {"ACTIVE_POWER", 0x0011},
     {"0012", 0x0012}, // 0x0000 none
     {"0013", 0x0013}, // 0x5c43 idk
     {"0014", 0x0014}, // 0x58d4 idk
-    {"CURRENT_APPARENT_POWER", 0x0015},
+    {"APPARENT_POWER", 0x0015},
     {"0016", 0x0016}, // 0x0000 none
     {"0017", 0x0017}, // maybe time
     {"0018", 0x0018}, // 0x0000 none
     {"0019", 0x0019}, // maybe time
-    {"CURRENT_TEMPERATURE", 0x001a},
+    {"TEMPERATURE", 0x001a},
     {"001b", 0x001b}, // 0xdb99 idk
     {"001c", 0x001c}, // 0x0000 none
-    {"CURRENT_POWER_FACTOR", 0x001d},
+    {"POWER_FACTOR", 0x001d},
     {"001e", 0x001e}, // current (duplicate)
     {"001f", 0x001f}, // 0xc3c0 idk
     {"WRITE_PARAMETER_PASSWORD", 0x000E}
@@ -125,22 +125,30 @@ int main() {
     cout << "TTY attributes configured successfully." << endl;
     while(true){
         vector<uint8_t> data = getDataByStartAddr(0x0010,16);
-        vector<uint8_t> data1 = getDataByStartAddr(CURRENT_VOLTAGE,1);
+        vector<uint8_t> data1 = getDataByCommand("VOLTAGE",2);
         if (data.empty()) {
             continue;
         }
+        float activePower = (data[5] << 8 | data[6]) / 10.0f;
+        float apparentPower = (data[13] << 8 | data[14]) / 10.0f;
+        float reactivePower = sqrt(pow(apparentPower, 2) - pow(activePower, 2));
+        float temperature = (data[23] << 8 | data[24]);
+        float powerFactor = (data[29] << 8 | data[30]) / 100.0f;
+        float frequency = (data[31] << 8 | data[32]) / 10.0f;
+        float voltage = (data1[3] << 8 | data1[4]) / 10.0f;
+        float current = (data1[5] << 8 | data1[6]) / 1000.0f;
         // printHex(data);
         json j = {
             {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
             {"LEVEL", "info"},
-            {"CURRENT_ACTIVE_POWER", (data[5] << 8 | data[6])/10.0f},
-            {"CURRENT_CURRENT", (data[13] << 8 | data[14])/1000.0f},
-            {"CURRENT_TEMPERATURE", data[23] << 8 | data[24]},
-            {"CURRENT_POWER_FACTOR", (data[29] << 8 | data[30])/100.0f},
-            {"CURRENT_FREQUENCY", (data[31] << 8 | data[32])/10.0f},
-            {"CURRENT_VOLTAGE", (data1[3] << 8 | data1[4])/10.0f},
-            // {"CURRENT_APPARENT_POWER", (data[17] << 8 | data[18])/10.0f},
-            // {"CURRENT_REACTIVE_POWER", (data[19] << 8 | data[20])/10.0f},
+            {"ACTIVE_POWER", activePower},
+            {"APPARENT_POWER", apparentPower},
+            {"REACTIVE_POWER", reactivePower},
+            {"TEMPERATURE", temperature},
+            {"POWER_FACTOR", powerFactor},
+            {"FREQUENCY", frequency},
+            {"VOLTAGE", voltage},
+            {"CURRENT", current},
         };
         cout << j << endl;
     }
