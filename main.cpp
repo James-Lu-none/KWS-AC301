@@ -151,13 +151,19 @@ int main() {
     //     }
     //     cout << "----------------------------------------" << endl;
     // }
+    
     for(uint32_t i=0;i<4096;i++){
+        auto start = chrono::steady_clock::now();
         uint32_t offset = i * 16;
         vector<uint8_t> data = getDataByStartAddr(offset,16);
         data.insert(data.begin(), offset&0xFF);
         data.insert(data.begin(), offset>>8);
         printHex(data);
+        auto end = chrono::steady_clock::now();
+        auto duration = chrono::duration_cast<chrono::milliseconds>(end - start).count();
+        cout << "Elapsed time: " << duration << " ms" << endl;
     }
+    
 
 
 
@@ -227,7 +233,7 @@ vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs) {
 }
 
 vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs) {
-    vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x02, startAddr, numRegs);
+    vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x03, startAddr, numRegs);
     uint16_t expectedSize = 5 + numRegs * 2; // 5 bytes for header + 2 bytes per register
     vector<uint8_t> response(expectedSize);
     for (uint16_t i=0; i < retryTime; i++) {
