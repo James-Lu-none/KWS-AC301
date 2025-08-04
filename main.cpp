@@ -18,12 +18,13 @@ using namespace std;
 termios tty{};
 const char* device = "/dev/ttyUSB0";
 uint8_t slaveAddr = 0x02;
-uint8_t retryTime = 100;
+uint8_t retryTime = 3;
 int fd;
 
 void printHex(const vector<uint8_t>& data);
 vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, uint16_t startAddr, uint16_t numRegs);
-vector<uint8_t> getdata(const string& commandType, uint16_t numRegs);
+vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs);
+vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs);
 bool crc_check(uint8_t* message, size_t size);
 
 unordered_map<string, uint16_t> commandTypeToStartAddr = {
@@ -123,7 +124,7 @@ int main() {
     }
     cout << "TTY attributes configured successfully." << endl;
     while(true){
-        vector<uint8_t> data = getdata("CURRENT_VOLTAGE",16);
+        vector<uint8_t> data = getDataByCommand("CURRENT_VOLTAGE",16);
         json j = {
             {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
             {"LEVEL", "info"},
@@ -190,19 +191,24 @@ void logError(const string& message) {
         {"LEVEL", "error"},
         {"MESSAGE", message}
     };
+    cout << j.dump() << endl;
 }
-vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
+vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs) {
     auto it = commandTypeToStartAddr.find(commandType);
     if (it == commandTypeToStartAddr.end()) {
         spdlog::error("Invalid command type: {}", commandType);
         return {};
     }
     uint16_t startAddr = it->second;
+    return getDataByStartAddr(startAddr, numRegs);
+}
 
-    vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x03, startAddr, numRegs);
+vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs) {
+    vector<uint8_t> request = buildModbusRTURequest(slaveAddr, 0x02, startAddr, numRegs);
     uint16_t expectedSize = 5 + numRegs * 2; // 5 bytes for header + 2 bytes per register
+    vector<uint8_t> response(expectedSize);
     for (uint16_t i=0; i < retryTime; i++) {
-        vector<uint8_t> response(expectedSize);
+        fill(response.begin(), response.end(), 0);
         tcflush(fd, TCIFLUSH);
         ssize_t bytesWritten = write(fd, request.data(), request.size());
         if (bytesWritten != static_cast<ssize_t>(request.size())) {
@@ -211,6 +217,7 @@ vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
         }
         
         int totalBytesRead = 0;
+        string message = "";
         while (totalBytesRead < expectedSize) {
             tcdrain(fd);
             fd_set readfds;
@@ -221,15 +228,25 @@ vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
             timeout.tv_usec = 500000;
             int selectResult = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
             if (!(selectResult > 0 && FD_ISSET(fd, &readfds))) {
-                logError("Timeout or error in select");
+                message = "Timeout or error in select";
                 break;
             }
             int bytesRead = read(fd, response.data() + totalBytesRead, expectedSize - totalBytesRead);
             if (bytesRead < 0) {
-                logError("Error reading from serial port");
+                message = "Error reading from serial port";
                 break;
             }
             totalBytesRead += bytesRead;
+            if (totalBytesRead > 3){
+                if (response[1] != 0x03) {
+                    message = "Invalid response from slave";
+                    return response;
+                }
+            }
+        }
+        if (message != "") {
+            logError(message);
+            continue;
         }
         if (!(crc_check(response.data(), response.size()))) {
             logError("CRC check failed");
@@ -237,6 +254,7 @@ vector<uint8_t> getdata(const string& commandType, uint16_t numRegs) {
         }
         return response;
     }
+    logError("Failed to get data after multiple retries");
     return {};
 }
 
