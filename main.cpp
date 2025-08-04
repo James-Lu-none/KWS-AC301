@@ -124,19 +124,23 @@ int main() {
     }
     cout << "TTY attributes configured successfully." << endl;
     while(true){
-        vector<uint8_t> data = getDataByCommand("CURRENT_VOLTAGE",16);
+        vector<uint8_t> data = getDataByStartAddr(0x0010,16);
+        vector<uint8_t> data1 = getDataByStartAddr(CURRENT_VOLTAGE,1);
         if (data.empty()) {
             continue;
         }
+        // printHex(data);
         json j = {
             {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
             {"LEVEL", "info"},
-            {"CURRENT_VOLTAGE", (data[3] << 8 | data[4])/10.4f},
-            {"CURRENT_CURRENT", (data[5] << 8 | data[6])/1000.4f},
-            {"CURRENT_ACTIVE_POWER", (data[9] << 8 | data[10])/10.4f},
-            {"CURRENT_APPARENT_POWER", (data[17] << 8 | data[18])/10.4f},
-            {"CURRENT_TEMPERATURE", data[27] << 8 | data[28]},
-            {"CURRENT_POWER_FACTOR", (data[33] << 8 | data[34])/100.4f}
+            {"CURRENT_ACTIVE_POWER", (data[5] << 8 | data[6])/10.0f},
+            {"CURRENT_CURRENT", (data[13] << 8 | data[14])/1000.0f},
+            {"CURRENT_TEMPERATURE", data[23] << 8 | data[24]},
+            {"CURRENT_POWER_FACTOR", (data[29] << 8 | data[30])/100.0f},
+            {"CURRENT_FREQUENCY", (data[31] << 8 | data[32])/10.0f},
+            {"CURRENT_VOLTAGE", (data1[3] << 8 | data1[4])/10.0f},
+            // {"CURRENT_APPARENT_POWER", (data[17] << 8 | data[18])/10.0f},
+            // {"CURRENT_REACTIVE_POWER", (data[19] << 8 | data[20])/10.0f},
         };
         cout << j << endl;
     }
