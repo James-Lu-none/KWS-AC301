@@ -19,6 +19,8 @@ termios tty{};
 const char* device = "/dev/ttyUSB0";
 uint8_t slaveAddr = 0x02;
 uint8_t retryTime = 3;
+uint8_t restartThreshold = 10;
+uint8_t restartCounter = 0;
 int fd;
 
 void printHex(const vector<uint8_t>& data);
@@ -124,8 +126,12 @@ int main() {
     }
     // cout << "TTY attributes configured successfully." << endl;
     while(true){
+        restartCounter = 0;
         vector<uint8_t> data = getDataByStartAddr(0x0010,16);
         vector<uint8_t> data1 = getDataByCommand("VOLTAGE",2);
+        if (restartCounter >= restartThreshold) {
+            return 1;
+        }
         if (data.empty()) {
             continue;
         }
@@ -270,6 +276,7 @@ vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs) {
         }
         return response;
     }
+    restartCounter++;
     // logError("Failed to get data after multiple retries");
     return {};
 }
