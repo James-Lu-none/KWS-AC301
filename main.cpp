@@ -90,19 +90,19 @@ unordered_map<string, uint16_t> commandTypeToStartAddr = {
 int main() {
     fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
     if (fd < 0) {
-        cerr << "Error opening " << device << endl;
+        // cerr << "Error opening " << device << endl;
         return 1;
     }
-    cout << "Opened " << device << " successfully." << endl;
+    // cout << "Opened " << device << " successfully." << endl;
 
     
     if (tcgetattr(fd, &tty) != 0) {
-        cerr << "Error getting tty attributes" << endl;
+        // cerr << "Error getting tty attributes" << endl;
         close(fd);
         return 1;
     }
     
-    cout << "Configuring tty attributes." << endl;
+    // cout << "Configuring tty attributes." << endl;
     cfsetospeed(&tty, B9600);
     cfsetispeed(&tty, B9600);
     tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
@@ -118,11 +118,11 @@ int main() {
     tty.c_cflag &= ~CRTSCTS;
     
     if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        cerr << "Error setting tty attributes" << endl;
+        // cerr << "Error setting tty attributes" << endl;
         close(fd);
         return 1;
     }
-    cout << "TTY attributes configured successfully." << endl;
+    // cout << "TTY attributes configured successfully." << endl;
     while(true){
         vector<uint8_t> data = getDataByStartAddr(0x0010,16);
         vector<uint8_t> data1 = getDataByCommand("VOLTAGE",2);
@@ -132,7 +132,7 @@ int main() {
         float activePower = (data[5] << 8 | data[6]) / 10.0f;
         float apparentPower = (data[13] << 8 | data[14]) / 10.0f;
         float reactivePower = sqrt(pow(apparentPower, 2) - pow(activePower, 2));
-        float temperature = (data[23] << 8 | data[24]);
+        float temperature = (data[23] << 8 | data[24]) / 1.0f;
         float powerFactor = (data[29] << 8 | data[30]) / 100.0f;
         float frequency = (data[31] << 8 | data[32]) / 10.0f;
         float voltage = (data1[3] << 8 | data1[4]) / 10.0f;
@@ -154,7 +154,7 @@ int main() {
     }
 
     close(fd);
-    cout << "Closed " << device << " successfully." << endl;
+    // cout << "Closed " << device << " successfully." << endl;
     return 0;
 }
 
@@ -212,7 +212,7 @@ void logError(const string& message) {
 vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs) {
     auto it = commandTypeToStartAddr.find(commandType);
     if (it == commandTypeToStartAddr.end()) {
-        spdlog::error("Invalid command type: {}", commandType);
+        // spdlog::error("Invalid command type: {}", commandType);
         return {};
     }
     uint16_t startAddr = it->second;
@@ -228,7 +228,7 @@ vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs) {
         tcflush(fd, TCIFLUSH);
         ssize_t bytesWritten = write(fd, request.data(), request.size());
         if (bytesWritten != static_cast<ssize_t>(request.size())) {
-            spdlog::error("Error writing to serial port");
+            // spdlog::error("Error writing to serial port");
             continue;
         }
         
@@ -261,16 +261,16 @@ vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs) {
             }
         }
         if (message != "") {
-            logError(message);
+            // logError(message);
             continue;
         }
         if (!(crc_check(response.data(), response.size()))) {
-            logError("CRC check failed");
+            // logError("CRC check failed");
             continue;
         }
         return response;
     }
-    logError("Failed to get data after multiple retries");
+    // logError("Failed to get data after multiple retries");
     return {};
 }
 
