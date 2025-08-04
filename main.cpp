@@ -123,20 +123,35 @@ int main() {
         return 1;
     }
     cout << "TTY attributes configured successfully." << endl;
+    // while(true){
+    //     vector<uint8_t> data = getDataByCommand("CURRENT_VOLTAGE",16);
+    //     json j = {
+    //         {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
+    //         {"LEVEL", "info"},
+    //         {"CURRENT_VOLTAGE", (data[3] << 8 | data[4])/10.4f},
+    //         {"CURRENT_CURRENT", (data[5] << 8 | data[6])/1000.4f},
+    //         {"CURRENT_ACTIVE_POWER", (data[9] << 8 | data[10])/10.4f},
+    //         {"CURRENT_APPARENT_POWER", (data[17] << 8 | data[18])/10.4f},
+    //         {"CURRENT_TEMPERATURE", data[27] << 8 | data[28]},
+    //         {"CURRENT_POWER_FACTOR", (data[33] << 8 | data[34])/100.4f}
+    //     };
+    //     cout << j << endl;
+    // }
     while(true){
-        vector<uint8_t> data = getDataByCommand("CURRENT_VOLTAGE",16);
-        json j = {
-            {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
-            {"LEVEL", "info"},
-            {"CURRENT_VOLTAGE", (data[3] << 8 | data[4])/10.4f},
-            {"CURRENT_CURRENT", (data[5] << 8 | data[6])/1000.4f},
-            {"CURRENT_ACTIVE_POWER", (data[9] << 8 | data[10])/10.4f},
-            {"CURRENT_APPARENT_POWER", (data[17] << 8 | data[18])/10.4f},
-            {"CURRENT_TEMPERATURE", data[27] << 8 | data[28]},
-            {"CURRENT_POWER_FACTOR", (data[33] << 8 | data[34])/100.4f}
-        };
-        cout << j << endl;
+        vector<vector<uint8_t>> alldata;
+        for(uint32_t i=0;i<10;i++){
+            uint32_t offset = i * 16;
+            vector<uint8_t> data = getDataByStartAddr(offset,16);
+            data.insert(data.begin(), offset&0xFF);
+            data.insert(data.begin(), offset>>8);
+            alldata.push_back(data);
+        }
+        for (const auto& data : alldata) {
+            printHex(data);
+        }
+        cout << "----------------------------------------" << endl;
     }
+
 
     close(fd);
     cout << "Closed " << device << " successfully." << endl;
@@ -245,17 +260,18 @@ vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs) {
             }
         }
         if (message != "") {
-            logError(message);
+            // spdlog::error("Error: {}", message);
             continue;
         }
         if (!(crc_check(response.data(), response.size()))) {
-            logError("CRC check failed");
+            // logError(message);
             continue;
         }
         return response;
     }
-    logError("Failed to get data after multiple retries");
-    return {};
+    // logError("Failed to get data after multiple retries");
+    // return {};
+    return response; // Return the last response even if it failed
 }
 
 void printHex(const vector<uint8_t>& data) {
