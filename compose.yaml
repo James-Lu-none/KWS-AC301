@@ -11,14 +11,14 @@ services:
       - /dev/ttyUSB0:/dev/ttyUSB0
     logging:
       driver: "json-file"
-    restart: always
+    restart: unless-stopped
       
-  # take logs from power-meter-reader and send to Loki
-  promtail:
-    image: grafana/promtail:latest
-    volumes:
-      - ./promtail-config.yaml:/etc/promtail/config.yaml
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/config.yaml
-    depends_on:
-      - power-meter-reader
+  # # take logs from power-meter-reader and send to Loki
+  # promtail:
+  #   image: grafana/promtail:latest
+  #   volumes:
+  #     - ./promtail-config.yaml:/etc/promtail/config.yaml
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   command: -config.file=/etc/promtail/config.yaml
+  #   depends_on:
+  #     - power-meter-reader
