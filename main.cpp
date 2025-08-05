@@ -12,13 +12,11 @@
 #include <thread>
 #include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
+#include "config.h"
 using json = nlohmann::json;
 using namespace std;
 
 termios tty{};
-const char* device = "/dev/ttyUSB0";
-uint8_t slaveAddr = 0x02;
-uint8_t retryTime = 3;
 int fd;
 
 void printHex(const vector<uint8_t>& data);
@@ -26,66 +24,6 @@ vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, u
 vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs);
 vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs);
 bool crc_check(uint8_t* message, size_t size);
-
-unordered_map<string, uint16_t> commandTypeToStartAddr = {
-    {"RATED_VOLTAGE", 0x010E},
-    {"RATED_CURRENT", 0x020E},
-    {"ACTIVE_POWER_UNDER_0_5L", 0x030E},
-    {"REACTIVE_POWER_UNDER_0_5L", 0x040E},
-    {"HARDWARE_VERSION_LOW", 0x050E},
-    {"HARDWARE_VERSION_HIGH", 0x060E},
-    {"SOFTWARE_VERSION_LOW", 0x070E},
-    {"SOFTWARE_VERSION_HIGH", 0x080E},
-    {"PROTOCOL_VERSION_LOW", 0x090E},
-    {"PROTOCOL_VERSION_HIGH", 0x0A0E},
-    {"MODULE_TYPE", 0x0B0E},
-    {"COMM_ADDR_BAUD_STATUS", 0x0C0E},
-    {"PULSE_CONSTANT", 0x0D0E},
-    {"CHANNEL_VOLTAGE", 0x0E0E},
-    {"CHANNEL_CURRENT_LOW", 0x0F0E},
-    {"CHANNEL_CURRENT_HIGH", 0x100E},
-    {"CHANNEL_ACTIVE_POWER_LOW_WATTS", 0x110E},
-    {"CHANNEL_ACTIVE_POWER_HIGH", 0x120E},
-    {"CHANNEL_REACTIVE_POWER_LOW", 0x130E},
-    {"CHANNEL_REACTIVE_POWER_HIGH", 0x140E},
-    {"CHANNEL_APPARENT_POWER_LOW", 0x150E},
-    {"CHANNEL_APPARENT_POWER_HIGH", 0x160E},
-    {"CHANNEL_ENERGY_LOW", 0x170E},
-    {"CHANNEL_ENERGY_HIGH", 0x180E},
-    {"OPERATING_MINUTES", 0x190E},
-    {"CURRENT_EXTERNAL_TEMPERATURE", 0x1A0E},
-    {"CURRENT_INTERNAL_TEMPERATURE", 0x1B0E},
-    {"RTC_BATTERY_VOLTAGE", 0x1C0E},
-    {"POWER_FACTOR", 0x1D0E},
-    {"VOLTAGE_FREQUENCY", 0x1E0E},
-    {"ALARM_STATUS_BYTE", 0x1F0E},
-    {"RTC_CLOCK_YEAR", 0x280E},
-    {"RTC_CLOCK_MONTH", 0x290E},
-    {"RTC_CLOCK_DAY", 0x2A0E},
-    {"RTC_CLOCK_HOUR", 0x2B0E},
-    {"RTC_CLOCK_MINUTE", 0x2C0E},
-    {"RTC_CLOCK_SECOND", 0x2D0E},
-
-    {"CURRENT_VOLTAGE", 0x000E},
-    {"CURRENT_CURRENT", 0x000F},
-    {"0010", 0x0010}, // 0x0000 none
-    {"CURRENT_ACTIVE_POWER", 0x0011},
-    {"0012", 0x0012}, // 0x0000 none
-    {"0013", 0x0013}, // 0x5c43 idk
-    {"0014", 0x0014}, // 0x58d4 idk
-    {"CURRENT_APPARENT_POWER", 0x0015},
-    {"0016", 0x0016}, // 0x0000 none
-    {"0017", 0x0017}, // maybe time
-    {"0018", 0x0018}, // 0x0000 none
-    {"0019", 0x0019}, // maybe time
-    {"CURRENT_TEMPERATURE", 0x001a},
-    {"001b", 0x001b}, // 0xdb99 idk
-    {"001c", 0x001c}, // 0x0000 none
-    {"CURRENT_POWER_FACTOR", 0x001d},
-    {"001e", 0x001e}, // current (duplicate)
-    {"001f", 0x001f}, // 0xc3c0 idk
-    {"WRITE_PARAMETER_PASSWORD", 0x000E}
-};
 
 int main() {
     fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
@@ -151,19 +89,21 @@ int main() {
     //     }
     //     cout << "----------------------------------------" << endl;
     // }
-    
-    for(uint32_t i=0;i<4096;i++){
-        auto start = chrono::steady_clock::now();
-        uint32_t offset = i * 16;
-        vector<uint8_t> data = getDataByStartAddr(offset,16);
+    // for(uint32_t i=0;i<0xFFF;i++){
+    //     uint32_t offset = i * 16;
+    //     vector<uint8_t> data = getDataByStartAddr(offset,16);
+    //     data.insert(data.begin(), offset&0xFF);
+    //     data.insert(data.begin(), offset>>8);
+    //     printHex(data);
+    // }
+
+    for(uint32_t i=0;i<0xFFFF;i++){
+        uint32_t offset = i;
+        vector<uint8_t> data = getDataByStartAddr(0x0017,1);
         data.insert(data.begin(), offset&0xFF);
         data.insert(data.begin(), offset>>8);
         printHex(data);
-        auto end = chrono::steady_clock::now();
-        auto duration = chrono::duration_cast<chrono::milliseconds>(end - start).count();
-        cout << "Elapsed time: " << duration << " ms" << endl;
     }
-    
 
 
 
