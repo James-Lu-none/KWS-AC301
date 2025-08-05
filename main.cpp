@@ -30,19 +30,19 @@ bool crc_check(uint8_t* message, size_t size);
 int main() {
     fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
     if (fd < 0) {
-        jsonLog("Error opening device", "error");
+        jsonLog("ERROR opening device", "FATAL");
         return 1;
     }
-    jsonLog("Opened device successfully.", "info");
+    jsonLog("Opened device successfully.", "DEBUG");
 
     
     if (tcgetattr(fd, &tty) != 0) {
-        jsonLog("Error getting tty attributes", "error");
+        jsonLog("ERROR getting tty attributes", "FATAL");
         close(fd);
         return 1;
     }
 
-    jsonLog("Configuring tty attributes.", "info");
+    jsonLog("Configuring tty attributes.", "DEBUG");
     cfsetospeed(&tty, B9600);
     cfsetispeed(&tty, B9600);
     tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
@@ -58,17 +58,18 @@ int main() {
     tty.c_cflag &= ~CRTSCTS;
     
     if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        jsonLog("Error setting tty attributes", "error");
+        jsonLog("ERROR setting tty attributes", "fatal");
         close(fd);
         return 1;
     }
-    jsonLog("TTY attributes configured successfully.", "info");
+    jsonLog("TTY attributes configured successfully.", "DEBUG");
     while(true){
         restartCounter = 0;
         vector<uint8_t> data = getDataByStartAddr(0x0010,16);
         vector<uint8_t> data1 = getDataByCommand("VOLTAGE",2);
         if (restartCounter >= restartThreshold) {
-            return 1;
+            jsonLog("Restart counter exceeded", "FATAL");
+            break;
         }
         if (data.empty() || data1.empty()) {
             continue;
@@ -86,7 +87,7 @@ int main() {
         // printHex(data);
         json j = {
             {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
-            {"LEVEL", "info"},
+            {"LEVEL", "INFO"},
             {"ACTIVE_POWER", activePower},
             {"APPARENT_POWER", apparentPower},
             {"KILOWATT_HOURS", kilowattHours},
@@ -102,7 +103,11 @@ int main() {
     }
 
     close(fd);
-    jsonLog("Closed device successfully.", "info");
+    if (fd < 0) {
+        jsonLog("ERROR closing device", "FATAL");
+        return 1;
+    }
+    jsonLog("Closed device successfully.", "DEBUG");
     return 0;
 }
 
@@ -161,7 +166,7 @@ void jsonLog(const string& message, const string& level, const vector<uint8_t>& 
 vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs) {
     auto it = commandTypeToStartAddr.find(commandType);
     if (it == commandTypeToStartAddr.end()) {
-        jsonLog("Invalid command type", "error", {});
+        jsonLog("Invalid command type", "WARN", {});
         return {};
     }
     uint16_t startAddr = it->second;
@@ -177,7 +182,7 @@ vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs) {
         tcflush(fd, TCIFLUSH);
         ssize_t bytesWritten = write(fd, request.data(), request.size());
         if (bytesWritten != static_cast<ssize_t>(request.size())) {
-            jsonLog("Error writing to serial port", "error", response);
+            jsonLog("ERROR writing to serial port", "ERROR", response);
             continue;
         }
         
@@ -193,29 +198,29 @@ vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs) {
             timeout.tv_usec = 500000;
             int selectResult = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
             if (!(selectResult > 0 && FD_ISSET(fd, &readfds))) {
-                jsonLog("Timeout or error in select", "debug", response);
+                jsonLog("Timeout or ERROR in select", "WARN", response);
                 break;
             }
             int bytesRead = read(fd, response.data() + totalBytesRead, expectedSize - totalBytesRead);
             if (bytesRead < 0) {
-                jsonLog("Error reading from serial port", "debug", response);
+                jsonLog("ERROR reading from serial port", "ERROR", response);
                 break;
             }
             totalBytesRead += bytesRead;
             if (totalBytesRead > 3){
                 if (response[1] != 0x03) {
-                    jsonLog("Invalid response from slave", "debug", response);
+                    jsonLog("Unexpected response from slave", "WARN", response);
                     break;
                 }
             }
         }
         if (!(crc_check(response.data(), response.size()))) {
-            jsonLog("Modbus RTU CRC check failed", "debug", response);
+            jsonLog("Modbus RTU CRC check failed", "WARN", response);
         }
         return response;
     }
     restartCounter++;
-    jsonLog("Failed to get data after multiple retries", "error", response);
+    jsonLog("Failed to get data after multiple retries", "ERROR", response);
     return {};
 }
 
