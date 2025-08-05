@@ -10,6 +10,7 @@ using std::vector;
 const char* device = "/dev/ttyUSB0";
 const uint8_t slaveAddr = 0x02;
 const uint8_t retryTime = 3;
+const uint8_t restartThreshold = 3;
 
 inline const unordered_map<string, uint16_t> commandTypeToStartAddr = {
     {"RATED_VOLTAGE", 0x010E},

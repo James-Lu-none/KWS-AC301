@@ -18,6 +18,7 @@ using namespace std;
 
 termios tty{};
 int fd;
+uint8_t restartCounter;
 
 void printHex(const vector<uint8_t>& data);
 vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, uint16_t startAddr, uint16_t numRegs);
@@ -73,7 +74,9 @@ int main() {
         }
         float activePower = (data[5] << 8 | data[6]) / 10.0f;
         float apparentPower = (data[13] << 8 | data[14]) / 10.0f;
+        float kilowattHours = (data[17] << 8 | data[18]) / 1000.0f;
         float reactivePower = sqrt(pow(apparentPower, 2) - pow(activePower, 2));
+        float elapsedTime = (data[21] << 8 | data[22]) / 60.0f;
         float temperature = (data[23] << 8 | data[24]) / 1.0f;
         float powerFactor = (data[29] << 8 | data[30]) / 100.0f;
         float frequency = (data[31] << 8 | data[32]) / 10.0f;
@@ -85,7 +88,9 @@ int main() {
             {"LEVEL", "info"},
             {"ACTIVE_POWER", activePower},
             {"APPARENT_POWER", apparentPower},
+            {"KILOWATT_HOURS", kilowattHours},
             {"REACTIVE_POWER", reactivePower},
+            {"ELAPSED_TIME", elapsedTime},
             {"TEMPERATURE", temperature},
             {"POWER_FACTOR", powerFactor},
             {"FREQUENCY", frequency},
