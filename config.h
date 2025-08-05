@@ -7,7 +7,7 @@ using std::string;
 using std::unordered_map;
 using std::vector;
 
-const string device = "/dev/ttyUSB0";
+const char* device = "/dev/ttyUSB0";
 const uint8_t slaveAddr = 0x02;
 const uint8_t retryTime = 3;
 
@@ -37,8 +37,8 @@ inline const unordered_map<string, uint16_t> commandTypeToStartAddr = {
     {"CHANNEL_ENERGY_LOW", 0x170E},
     {"CHANNEL_ENERGY_HIGH", 0x180E},
     {"OPERATING_MINUTES", 0x190E},
-    {"CURRENT_EXTERNAL_TEMPERATURE", 0x1A0E},
-    {"CURRENT_INTERNAL_TEMPERATURE", 0x1B0E},
+    {"EXTERNAL_TEMPERATURE", 0x1A0E},
+    {"INTERNAL_TEMPERATURE", 0x1B0E},
     {"RTC_BATTERY_VOLTAGE", 0x1C0E},
     {"POWER_FACTOR", 0x1D0E},
     {"VOLTAGE_FREQUENCY", 0x1E0E},
@@ -50,23 +50,23 @@ inline const unordered_map<string, uint16_t> commandTypeToStartAddr = {
     {"RTC_CLOCK_MINUTE", 0x2C0E},
     {"RTC_CLOCK_SECOND", 0x2D0E},
 
-    {"CURRENT_VOLTAGE", 0x000E},
-    {"CURRENT_CURRENT", 0x000F},
+    {"VOLTAGE", 0x000E},
+    {"CURRENT", 0x000F},
     {"0010", 0x0010}, // 0x0000 none
-    {"CURRENT_ACTIVE_POWER", 0x0011},
+    {"ACTIVE_POWER", 0x0011},
     {"0012", 0x0012}, // 0x0000 none
     {"0013", 0x0013}, // 0x5c43 idk
     {"0014", 0x0014}, // 0x58d4 idk
-    {"CURRENT_APPARENT_POWER", 0x0015},
+    {"APPARENT_POWER", 0x0015},
     {"0016", 0x0016}, // 0x0000 none
-    {"0017", 0x0017}, // maybe time
+    {"KILOWATT_HOUR", 0x0017},
     {"0018", 0x0018}, // 0x0000 none
-    {"0019", 0x0019}, // maybe time
-    {"CURRENT_TEMPERATURE", 0x001a},
+    {"ELAPSED_TIME", 0x0019},
+    {"TEMPERATURE", 0x001a},
     {"001b", 0x001b}, // 0xdb99 idk
     {"001c", 0x001c}, // 0x0000 none
-    {"CURRENT_POWER_FACTOR", 0x001d},
-    {"001e", 0x001e}, // current (duplicate)
+    {"POWER_FACTOR", 0x001d},
+    {"FREQUENCY", 0x001e},
     {"001f", 0x001f}, // 0xc3c0 idk
     {"WRITE_PARAMETER_PASSWORD", 0x000E}
 };
