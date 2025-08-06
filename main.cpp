@@ -119,20 +119,22 @@ int main() {
     return 0;
 }
 
-bool crc_check(uint8_t* message, size_t size) {
-    if (size < 2) return false; // CRC requires at least 2 bytes
+uint16_t crc16(const uint8_t* data, size_t length) {
     uint16_t crc = 0xFFFF;
-    for (size_t pos = 0; pos < size - 2; pos++) {
-        crc ^= message[pos];
-        for (int i = 8; i != 0; i--) {
-            if ((crc & 0x0001) != 0) {
-                crc >>= 1;
-                crc ^= 0xA001;
-            } else {
-                crc >>= 1;
-            }
-        }
+    uint8_t index;
+
+    while (length--)
+    {
+        index = *data++ ^ crc;
+        crc >>= 8;
+        crc  ^= crcTable[index];
     }
+    return crc;
+}
+
+bool crc_check(uint8_t* message, size_t size) {
+    if (size < 5) return false;
+    uint16_t crc = crc16(message, size - 2);
     return (crc == (message[size - 2] | (message[size - 1] << 8)));
 }
 
@@ -145,17 +147,7 @@ vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, u
     req.push_back((numRegs >> 8) & 0xFF);
     req.push_back(numRegs & 0xFF);
 
-    // CRC16 calculation
-    uint16_t crc = 0xFFFF;
-    for (size_t i = 0; i < req.size(); ++i) {
-        crc ^= req[i];
-        for (int j = 0; j < 8; ++j) {
-            if (crc & 0x0001)
-                crc = (crc >> 1) ^ 0xA001;
-            else
-                crc = crc >> 1;
-        }
-    }
+    uint16_t crc = crc16(req.data(), req.size());
     req.push_back(crc & 0xFF);         // CRC Low byte
     req.push_back((crc >> 8) & 0xFF);  // CRC High byte
     return req;
