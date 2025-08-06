@@ -7,7 +7,7 @@ using std::string;
 using std::unordered_map;
 using std::vector;
 
-#define struct SensorData {
+struct SensorData {
     float voltage, current, activePower, apparentPower;
     float kilowattHours, elapsedTime, temperature;
     float powerFactor, frequency, reactivePower;
