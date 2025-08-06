@@ -66,7 +66,7 @@ int main() {
         cout << j << endl;
     }
     
-    return 0;
+    return 1;
 }
 
 SensorData parseSensorData(const vector<uint8_t>& raw) {
