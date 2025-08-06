@@ -66,29 +66,32 @@ int main() {
     while(true){
         restartCounter = 0;
         auto start = chrono::steady_clock::now();       
-        vector<uint8_t> data = getDataByStartAddr(0x0010,16);
-        vector<uint8_t> data1 = getDataByCommand("VOLTAGE",2);
+        vector<uint8_t> data = getDataByCommand("VOLTAGE",17);
         auto end = chrono::steady_clock::now();
-
         if (restartCounter >= restartThreshold) {
             jsonLog("Restart counter exceeded", "FATAL");
             break;
         }
-        if (data.empty() || data1.empty()) {
+        if (data.empty()) {
             continue;
         }
+        vector<uint16_t> data16(17);
+        std::memcpy(data16.data(), data.data() + 3, sizeof(std::uint16_t)*17);
+        for_each(data16.begin(), data16.end(), [](uint16_t& val){ val = (val >> 8) | (val << 8); });
+
         float sampleRate = 1000.0 / chrono::duration_cast<chrono::milliseconds>(end - start).count();
-        float activePower = (data[5] << 8 | data[6]) / 10.0f;
-        float apparentPower = (data[13] << 8 | data[14]) / 10.0f;
-        float kilowattHours = (data[17] << 8 | data[18]) / 1000.0f;
+        
+        float voltage = data16[0] / 10.0f;
+        float current = data16[1] / 1000.0f;
+        float activePower = data16[3] / 10.0f;
+        float apparentPower = data16[7] / 10.0f;
+        float kilowattHours = data16[9] / 1000.0f;
+        float elapsedTime = data16[11] / 60.0f;
+        float temperature = data16[12] / 1.0f;
+        float powerFactor = data16[15] / 100.0f;
+        float frequency = data16[16] / 10.0f;
         float reactivePower = sqrt(pow(apparentPower, 2) - pow(activePower, 2));
-        float elapsedTime = (data[21] << 8 | data[22]) / 60.0f;
-        float temperature = (data[23] << 8 | data[24]) / 1.0f;
-        float powerFactor = (data[29] << 8 | data[30]) / 100.0f;
-        float frequency = (data[31] << 8 | data[32]) / 10.0f;
-        float voltage = (data1[3] << 8 | data1[4]) / 10.0f;
-        float current = (data1[5] << 8 | data1[6]) / 1000.0f;
-        // printHex(data);
+
         json j = {
             {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
             {"LEVEL", "INFO"},
