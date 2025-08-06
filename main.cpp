@@ -24,17 +24,18 @@ uint8_t restartCounter;
 void init();
 void jsonLog(const string& message, const string& level, const vector<uint8_t>& data = {});
 void printHex(const vector<uint8_t>& data);
+bool crc_check(uint8_t* message, size_t size);
 vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, uint16_t startAddr, uint16_t numRegs);
 vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs);
 vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs);
-bool crc_check(uint8_t* message, size_t size);
+SensorData parseSensorData(const vector<uint8_t>& raw);
 
 int main() {
     init();
     while(true){
         restartCounter = 0;
-        auto start = chrono::steady_clock::now();       
-        vector<uint8_t> data = getDataByStartAddr(0x000E,17);
+        auto start = chrono::steady_clock::now();
+        vector<uint8_t> data = getDataByStartAddr(0x000E, 17);
         auto end = chrono::steady_clock::now();
         if (restartCounter >= restartThreshold) {
             jsonLog("Restart counter exceeded", "FATAL");
@@ -44,36 +45,22 @@ int main() {
         if (data.empty()) {
             continue;
         }
-        vector<uint16_t> data16(17);
-        std::memcpy(data16.data(), data.data() + 3, sizeof(std::uint16_t)*17);
-        for_each(data16.begin(), data16.end(), [](uint16_t& val){ val = (val >> 8) | (val << 8); });
-
         float sampleRate = 1000.0 / chrono::duration_cast<chrono::milliseconds>(end - start).count();
-        
-        float voltage = data16[0] / 10.0f;
-        float current = data16[1] / 1000.0f;
-        float activePower = data16[3] / 10.0f;
-        float apparentPower = data16[7] / 10.0f;
-        float kilowattHours = data16[9] / 1000.0f;
-        float elapsedTime = data16[11] / 60.0f;
-        float temperature = data16[12] / 1.0f;
-        float powerFactor = data16[15] / 100.0f;
-        float frequency = data16[16] / 10.0f;
-        float reactivePower = sqrt(pow(apparentPower, 2) - pow(activePower, 2));
+        SensorData sensorData = parseSensorData(data);
 
         json j = {
             {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
             {"LEVEL", "INFO"},
-            {"ACTIVE_POWER", activePower},
-            {"APPARENT_POWER", apparentPower},
-            {"KILOWATT_HOURS", kilowattHours},
-            {"REACTIVE_POWER", reactivePower},
-            {"ELAPSED_TIME", elapsedTime},
-            {"TEMPERATURE", temperature},
-            {"POWER_FACTOR", powerFactor},
-            {"FREQUENCY", frequency},
-            {"VOLTAGE", voltage},
-            {"CURRENT", current},
+            {"ACTIVE_POWER", sensorData.activePower},
+            {"APPARENT_POWER", sensorData.apparentPower},
+            {"KILOWATT_HOURS", sensorData.kilowattHours},
+            {"REACTIVE_POWER", sensorData.reactivePower},
+            {"ELAPSED_TIME", sensorData.elapsedTime},
+            {"TEMPERATURE", sensorData.temperature},
+            {"POWER_FACTOR", sensorData.powerFactor},
+            {"FREQUENCY", sensorData.frequency},
+            {"VOLTAGE", sensorData.voltage},
+            {"CURRENT", sensorData.current},
             {"SAMPLE_RATE", sampleRate}
         };
         cout << j << endl;
@@ -81,6 +68,26 @@ int main() {
     
     return 0;
 }
+
+SensorData parseSensorData(const vector<uint8_t>& raw) {
+    vector<uint16_t> data16(17);
+    memcpy(data16.data(), raw.data() + 3, sizeof(uint16_t) * 17);
+    for_each(data16.begin(), data16.end(), [](uint16_t& val){ val = (val >> 8) | (val << 8); });
+
+    SensorData s;
+    s.voltage = data16[0] / 10.0f;
+    s.current = data16[1] / 1000.0f;
+    s.activePower = data16[3] / 10.0f;
+    s.apparentPower = data16[7] / 10.0f;
+    s.kilowattHours = data16[9] / 1000.0f;
+    s.elapsedTime = data16[11] / 60.0f;
+    s.temperature = data16[12];
+    s.powerFactor = data16[15] / 100.0f;
+    s.frequency = data16[16] / 10.0f;
+    s.reactivePower = sqrt(s.apparentPower * s.apparentPower - s.activePower * s.activePower);
+    return s;
+}
+
 
 uint16_t crc16(const uint8_t* data, size_t length) {
     uint16_t crc = 0xFFFF;

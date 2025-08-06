@@ -7,6 +7,12 @@ using std::string;
 using std::unordered_map;
 using std::vector;
 
+#define struct SensorData {
+    float voltage, current, activePower, apparentPower;
+    float kilowattHours, elapsedTime, temperature;
+    float powerFactor, frequency, reactivePower;
+};
+
 const char* device = "/dev/ttyUSB0";
 const uint8_t slaveAddr = 0x02;
 const uint8_t retryTime = 3;
