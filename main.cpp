@@ -65,8 +65,11 @@ int main() {
     jsonLog("TTY attributes configured successfully.", "DEBUG");
     while(true){
         restartCounter = 0;
+        auto start = chrono::steady_clock::now();       
         vector<uint8_t> data = getDataByStartAddr(0x0010,16);
         vector<uint8_t> data1 = getDataByCommand("VOLTAGE",2);
+        auto end = chrono::steady_clock::now();
+
         if (restartCounter >= restartThreshold) {
             jsonLog("Restart counter exceeded", "FATAL");
             break;
@@ -74,6 +77,7 @@ int main() {
         if (data.empty() || data1.empty()) {
             continue;
         }
+        float sampleRate = 1000.0 / chrono::duration_cast<chrono::milliseconds>(end - start).count();
         float activePower = (data[5] << 8 | data[6]) / 10.0f;
         float apparentPower = (data[13] << 8 | data[14]) / 10.0f;
         float kilowattHours = (data[17] << 8 | data[18]) / 1000.0f;
@@ -98,6 +102,7 @@ int main() {
             {"FREQUENCY", frequency},
             {"VOLTAGE", voltage},
             {"CURRENT", current},
+            {"SAMPLE_RATE", sampleRate}
         };
         cout << j << endl;
     }
@@ -158,7 +163,7 @@ void jsonLog(const string& message, const string& level, const vector<uint8_t>& 
         {"TIMESTAMP", chrono::system_clock::now().time_since_epoch().count()},
         {"LEVEL", level},
         {"MESSAGE", message},
-        {"DATA", data}
+        {"DATA", data},
     };
     cout << j.dump() << endl;
     return;
