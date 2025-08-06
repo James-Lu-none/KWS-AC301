@@ -12,6 +12,7 @@
 #include <thread>
 #include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
+#include <cstdlib>
 #include "config.h"
 using json = nlohmann::json;
 using namespace std;
@@ -20,6 +21,7 @@ termios tty{};
 int fd;
 uint8_t restartCounter;
 
+void init();
 void jsonLog(const string& message, const string& level, const vector<uint8_t>& data = {});
 void printHex(const vector<uint8_t>& data);
 vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, uint16_t startAddr, uint16_t numRegs);
@@ -28,49 +30,16 @@ vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs);
 bool crc_check(uint8_t* message, size_t size);
 
 int main() {
-    fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
-    if (fd < 0) {
-        jsonLog("ERROR opening device", "FATAL");
-        return 1;
-    }
-    jsonLog("Opened device successfully.", "DEBUG");
-
-    
-    if (tcgetattr(fd, &tty) != 0) {
-        jsonLog("ERROR getting tty attributes", "FATAL");
-        close(fd);
-        return 1;
-    }
-
-    jsonLog("Configuring tty attributes.", "DEBUG");
-    cfsetospeed(&tty, B9600);
-    cfsetispeed(&tty, B9600);
-    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
-    tty.c_iflag &= ~IGNBRK;
-    tty.c_lflag = 0;
-    tty.c_oflag = 0;
-    tty.c_cc[VMIN]  = 5;
-    tty.c_cc[VTIME] = 1;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_cflag |= (CLOCAL | CREAD);
-    tty.c_cflag &= ~(PARENB | PARODD);
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CRTSCTS;
-    
-    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        jsonLog("ERROR setting tty attributes", "fatal");
-        close(fd);
-        return 1;
-    }
-    jsonLog("TTY attributes configured successfully.", "DEBUG");
+    init();
     while(true){
         restartCounter = 0;
         auto start = chrono::steady_clock::now();       
-        vector<uint8_t> data = getDataByCommand("VOLTAGE",17);
+        vector<uint8_t> data = getDataByStartAddr(0x000E,17);
         auto end = chrono::steady_clock::now();
         if (restartCounter >= restartThreshold) {
             jsonLog("Restart counter exceeded", "FATAL");
-            break;
+            close(fd);
+            abort();
         }
         if (data.empty()) {
             continue;
@@ -109,13 +78,7 @@ int main() {
         };
         cout << j << endl;
     }
-
-    close(fd);
-    if (fd < 0) {
-        jsonLog("ERROR closing device", "FATAL");
-        return 1;
-    }
-    jsonLog("Closed device successfully.", "DEBUG");
+    
     return 0;
 }
 
@@ -229,4 +192,42 @@ void printHex(const vector<uint8_t>& data) {
         cout << hex << setw(2) << setfill('0') << static_cast<int>(byte) << " ";
     }
     cout << dec << endl;
+}
+
+void init(){
+    fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
+    if (fd < 0) {
+        jsonLog("ERROR opening device", "FATAL");
+        abort();
+    }
+    jsonLog("Opened device successfully.", "DEBUG");
+
+    
+    if (tcgetattr(fd, &tty) != 0) {
+        jsonLog("ERROR getting tty attributes", "FATAL");
+        close(fd);
+        abort();
+    }
+
+    jsonLog("Configuring tty attributes.", "DEBUG");
+    cfsetospeed(&tty, B9600);
+    cfsetispeed(&tty, B9600);
+    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
+    tty.c_iflag &= ~IGNBRK;
+    tty.c_lflag = 0;
+    tty.c_oflag = 0;
+    tty.c_cc[VMIN]  = 5;
+    tty.c_cc[VTIME] = 1;
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+    tty.c_cflag |= (CLOCAL | CREAD);
+    tty.c_cflag &= ~(PARENB | PARODD);
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CRTSCTS;
+    
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
+        jsonLog("ERROR setting tty attributes", "fatal");
+        close(fd);
+        abort();
+    }
+    jsonLog("TTY attributes configured successfully.", "DEBUG");
 }
