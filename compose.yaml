@@ -25,3 +25,4 @@ services:
     command: -config.file=/etc/promtail/config.yaml
     depends_on:
       - power-meter-reader
+    restart: always
