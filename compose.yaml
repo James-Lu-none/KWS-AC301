@@ -2,7 +2,7 @@ services:
   power-meter-reader:
     image: power-meter-reader:latest
     build:
-      context: .
+      context: ./src
       dockerfile: dockerfile
     labels:
       - "logging=promtail"
