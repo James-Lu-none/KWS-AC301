@@ -88,6 +88,22 @@ void sendToInfluxDB(const json& j) {
         if (value.is_number_float() || value.is_number_integer()) {
             fields += key + "=" + to_string(value.get<double>());
         }
+        else if (value.is_string()) {
+            fields += key + "=\"" + value.get<string>() + "\"";
+        }
+        else if (value.is_array()) {
+            fields += key + "=\"[";
+            for (size_t i = 0; i < value.size(); ++i) {
+                if (i > 0) fields += ",";
+                fields += to_string(value[i].get<int>());
+            }
+            fields += "]\"";
+        } else if (value.is_boolean()) {
+            fields += key + "=" + (value.get<bool>() ? "true" : "false");
+        } else {
+            cout << "Unsupported type for key: " << key << endl;
+            continue; // skip unsupported types
+        }
         firstField = false;
     }
 
@@ -179,6 +195,7 @@ void jsonLog(const string& message, const string& level, const vector<uint8_t>& 
         {"MESSAGE", message},
         {"DATA", data},
     };
+    cout << j.dump() << endl;
     sendToInfluxDB(j);
     return;
 }
