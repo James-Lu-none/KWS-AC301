@@ -179,7 +179,7 @@ void jsonLog(const string& message, const string& level, const vector<uint8_t>& 
         {"MESSAGE", message},
         {"DATA", data},
     };
-    cout << j.dump() << endl;
+    sendToInfluxDB(j);
     return;
 }
 vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs) {
