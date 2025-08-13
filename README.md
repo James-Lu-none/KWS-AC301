@@ -1,3 +1,7 @@
+# Power meter reader
+
+## reference
+
 [modbus doc](https://www.modbustools.com/modbus.html#function16)
 [termios.h](https://www.ibm.com/docs/en/aix/7.3.0?topic=files-termiosh-file)
 [input modes](https://www.gnu.org/software/libc/manual/html_node/Input-Modes.html)
@@ -5,6 +9,12 @@
 [termios.h cdsn](https://blog.csdn.net/Flag_ing/article/details/125644852)
 [termios.h sourcecode](https://github.com/python/cpython/blob/main/Modules/termios.c#L293)
 [nlohmann](https://github.com/nlohmann/json)
+
+## how to start
+
+```bash
+docker compose up -d --build --remove-orphans --force-recreate 
+```
 
 ## filter
 ```log
