@@ -4,6 +4,8 @@ services:
     build:
       context: ./src
       dockerfile: dockerfile
+    env_file:
+      - ".env"
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
     restart: always

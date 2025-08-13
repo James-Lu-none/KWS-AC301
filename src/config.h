@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <cstdlib>
 using std::string;
 using std::unordered_map;
 using std::vector;
@@ -13,6 +14,20 @@ struct SensorData {
     float powerFactor, frequency, reactivePower;
 };
 
+inline const string& getInfluxDBUrl() {
+    static const string url = []{
+        const char* env = getenv("INFLUXDB_URL");
+        return env ? string(env) : "";
+    }();
+    return url;
+}
+inline const string& getInfluxDBAuthToken() {
+    static const string token = []{
+        const char* env = getenv("INFLUXDB_AUTH_TOKEN");
+        return env ? string(env) : "";
+    }();
+    return token;
+}
 const char* device = "/dev/ttyUSB0";
 const uint8_t slaveAddr = 0x02;
 const uint8_t retryTime = 3;
