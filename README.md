@@ -6,6 +6,8 @@
 [termios.h sourcecode](https://github.com/python/cpython/blob/main/Modules/termios.c#L293)
 [nlohmann](https://github.com/nlohmann/json)
 
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/8aef22f8-a385-4928-af59-5eacd1f712b1" />
+
 ## filter
 ```log
 ftdi-ft && usb.dst == 2.5.2
