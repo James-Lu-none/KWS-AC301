@@ -4,25 +4,19 @@ services:
     build:
       context: ./src
       dockerfile: dockerfile
-    labels:
-      - "logging=promtail"
-      - "logging_job=power-meter-reader"
+    env_file:
+      - ".env"
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "30m"
-        max-file: "5"
     restart: always
       
-  # # take logs from power-meter-reader and send to Loki
-  promtail:
-    image: grafana/promtail:latest
-    volumes:
-      - ./promtail-config.yaml:/etc/promtail/config.yaml
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/config.yaml
-    depends_on:
-      - power-meter-reader
-    restart: always
+  # # # take logs from power-meter-reader and send to Loki
+  # promtail:
+  #   image: grafana/promtail:latest
+  #   volumes:
+  #     - ./promtail-config.yaml:/etc/promtail/config.yaml
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   command: -config.file=/etc/promtail/config.yaml
+  #   depends_on:
+  #     - power-meter-reader
+  #   restart: always

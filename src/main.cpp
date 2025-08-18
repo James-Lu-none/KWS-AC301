@@ -13,6 +13,7 @@
 #include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
 #include <cstdlib>
+#include <curl/curl.h>
 #include "config.h"
 using json = nlohmann::json;
 using namespace std;
@@ -25,6 +26,7 @@ void init();
 void jsonLog(const string& message, const string& level, const vector<uint8_t>& data = {});
 void printHex(const vector<uint8_t>& data);
 bool crc_check(uint8_t* message, size_t size);
+void sendToInfluxDB(const json& j);
 vector<uint8_t> buildModbusRTURequest(uint8_t slaveAddr, uint8_t functionCode, uint16_t startAddr, uint16_t numRegs);
 vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs);
 vector<uint8_t> getDataByStartAddr(uint16_t startAddr, uint16_t numRegs);
@@ -63,11 +65,74 @@ int main() {
             {"CURRENT", sensorData.current},
             {"SAMPLE_RATE", sampleRate}
         };
-        cout << j << endl;
+        sendToInfluxDB(j);
     }
     
     return 1;
 }
+
+void sendToInfluxDB(const json& j) {
+    string influxDBAuthToken = getInfluxDBAuthToken();
+    string influxDBUrl = getInfluxDBUrl();
+    if (influxDBUrl.empty() || influxDBAuthToken.empty()) {
+        jsonLog("InfluxDB URL or Auth Token not set", "ERROR");
+        return;
+    }
+    string measurement = "power_meter";
+    string tags = "level=" + j["LEVEL"].get<string>();
+    string fields;
+    bool firstField = true;
+    for (auto& [key, value] : j.items()) {
+        if (key == "TIMESTAMP" || key == "LEVEL") continue; // skip tag/timestamp keys
+        if (!firstField) fields += ",";
+        if (value.is_number_float() || value.is_number_integer()) {
+            fields += key + "=" + to_string(value.get<double>());
+        }
+        else if (value.is_string()) {
+            fields += key + "=\"" + value.get<string>() + "\"";
+        }
+        else if (value.is_array()) {
+            fields += key + "=\"[";
+            for (size_t i = 0; i < value.size(); ++i) {
+                if (i > 0) fields += ",";
+                fields += to_string(value[i].get<int>());
+            }
+            fields += "]\"";
+        } else if (value.is_boolean()) {
+            fields += key + "=" + (value.get<bool>() ? "true" : "false");
+        } else {
+            cout << "Unsupported type for key: " << key << endl;
+            continue; // skip unsupported types
+        }
+        firstField = false;
+    }
+
+    long long timestamp_ns = j["TIMESTAMP"].get<long long>();
+
+    string lineProtocol = measurement + "," + tags + " " + fields + " " + to_string(timestamp_ns);
+
+    cout << "Line protocol: " << lineProtocol << "\n";
+
+    CURL *curl = curl_easy_init();
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, influxDBUrl.c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, lineProtocol.c_str());
+        struct curl_slist *headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: text/plain");
+        headers = curl_slist_append(headers, ("Authorization: Token " + influxDBAuthToken).c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        CURLcode res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            cerr << "InfluxDB write failed: " << curl_easy_strerror(res) << "\n";
+        }
+
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+    }
+    return;
+}
+
 
 SensorData parseSensorData(const vector<uint8_t>& raw) {
     vector<uint16_t> data16(17);
@@ -131,6 +196,7 @@ void jsonLog(const string& message, const string& level, const vector<uint8_t>& 
         {"DATA", data},
     };
     cout << j.dump() << endl;
+    sendToInfluxDB(j);
     return;
 }
 vector<uint8_t> getDataByCommand(const string& commandType, uint16_t numRegs) {

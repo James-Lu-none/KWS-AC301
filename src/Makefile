@@ -5,7 +5,7 @@ TARGET := power_meter_reader
 SRC := main.cpp
 
 # Use system-installed headers
-LIBS := -lspdlog -lfmt
+LIBS := -lspdlog -lfmt -lcurl
 
 all: $(TARGET)
 
