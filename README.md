@@ -20,27 +20,32 @@
 
 ## how to start
 
-1. spin up a influxdb with a auth token
+1. spin up grafana and influxdb with a auth token
 2. copy the `example.env` file and fill in your influxdb token and url and rename it `.env`
-3. plugin the USB to RS485 converter and make sure it matches `device` parameter in config.h otherwise it wont work
+3. plugin the USB to RS485 converter and make sure it matches `device` parameter in config.h
 4. build and start the docker container
 
-```bash
-docker compose up -d --build --remove-orphans --force-recreate 
-```
+    ```bash
+    docker compose up -d --build --remove-orphans --force-recreate 
+    ```
+
+5. on grafana, add influxdb as data source and import the dashboard
 
 ## filter
+
 ```log
 ftdi-ft && usb.dst == 2.5.2
 ```
 
 ## Function 02(02hex) Read Discrete Inputs
-```
+
+```log
 A TX payload: 02021001580001020000af78
 ```
 
 ## Function 03 (03hex) Read Holding Registers
-```
+
+```log
 A TX payload: 0203000e0001e5fa
 A TX payload: 02030019000155fe
 A TX payload: 0203000f0002f43b
@@ -66,13 +71,15 @@ A TX payload: 02030019000155fe
 ```
 
 ## Function 16 (10hex) Write Multiple Registers
-```
+
+```log
 A TX payload: 0210015400020400000000f5b4
 ```
 
 
 ## payload examples
-```
+
+```log
 A TX payload: 0203000e0001e5fa
 A RX payload: 020302044fbf70
 A TX payload: 02030019000155fe
@@ -91,16 +98,9 @@ A TX payload: 020300170002743c
 A RX payload: 02030442f900000d7a
 ```
 
-
-
-
-level=error ts=2025-08-03T11:18:11.247756862Z caller=client.go:430 component=client host=10.0.1.100:3100 msg="final error sending batch" status=400 tenant= error="server returned HTTP status 400 Bad Request (400): entry with timestamp 2025-08-01 16:43:38.854444845 +0000 UTC ignored, reason: 'entry too far behind, entry timestamp is: 2025-08-01T16:43:38Z, oldest acceptable timestamp is: 2025-08-03T10:18:03Z',"
-
-## full table scan (Function 02(02hex) Read Discrete Inputs)
-
-
 ## full table scan (Function 03 (03hex) Read Holding Registers)
-```
+
+```log
 Opened /dev/ttyUSB0 successfully.
 Configuring tty attributes.
 TTY attributes configured successfully.
