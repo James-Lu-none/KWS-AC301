@@ -1,14 +1,14 @@
 # KWS-AC301 Power meter reader
 
-This project is written in c++ and is containerized for linux machine, it reads the data from KWS-AC301 thought a USB to RS485 converter and sends the data to a self host influxdb endpoint, and use grafana dashboards to visualize the data. Check out my other repo that spin up influxdb and grafana if needed. [pi5-lab](https://github.com/James-Lu-none/pi5-lab)
+This project is a power meter reader for KWS-AC301 written in c++ and is containerized for linux machine, it reads the data from KWS-AC301 thought a USB to RS485 converter and sends the data to a self host influxdb endpoint, and use grafana dashboards to visualize the data. Check out my other repo that spin up influxdb and grafana if needed. [pi5-lab](https://github.com/James-Lu-none/pi5-lab)
 
 ![grafana dashboard](grafana.png)
 
 ## prerequisite
 
-1. A linux machine with a USB port (i used pi5)
-2. A USB to RS485 converter
-3. docker installed
+1. A [kws-ac301](https://www.amazon.com/KWS-AC301-Wattmeter-Voltmeter-Analyzers-Electricity/dp/B0D8Y9Y2HK)
+2. A [USB to RS485 converter](https://www.pixelelectric.com/electronic-modules/miscellaneous-modules/logic-converter/usb-2-0-to-ttl-rs485-serial-converter-adapter/?srsltid=AfmBOorb-jDQMbRbqXznLa-K-Ly3L_MwHCS-Ji6I4QqOczBg5UBpMIS8)
+3. A linux machine with a USB port with docker installed (i used pi5)
 
 ## how to start
 
