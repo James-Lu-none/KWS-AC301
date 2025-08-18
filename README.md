@@ -1,20 +1,10 @@
-# Power meter reader
+# KWS-AC301 Power meter reader
 
-## reference
-
-[modbus doc](https://www.modbustools.com/modbus.html#function16)
-[termios.h](https://www.ibm.com/docs/en/aix/7.3.0?topic=files-termiosh-file)
-[input modes](https://www.gnu.org/software/libc/manual/html_node/Input-Modes.html)
-[fd](https://blog.csdn.net/yushuaigee/article/details/107883964)
-[termios.h cdsn](https://blog.csdn.net/Flag_ing/article/details/125644852)
-[termios.h sourcecode](https://github.com/python/cpython/blob/main/Modules/termios.c#L293)
-[nlohmann](https://github.com/nlohmann/json)
-
-<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/8aef22f8-a385-4928-af59-5eacd1f712b1" />
+![grafana dashboard](grafana.png)
 
 ## prerequisite
 
-1. A linux machine with a USB port
+1. A linux machine with a USB port (i used pi5)
 2. A USB to RS485 converter
 3. docker installed
 
@@ -31,7 +21,17 @@
 
 5. on grafana, add influxdb as data source and import the dashboard
 
-## filter
+## reference
+
+[modbus doc](https://www.modbustools.com/modbus.html#function16)
+[termios.h](https://www.ibm.com/docs/en/aix/7.3.0?topic=files-termiosh-file)
+[input modes](https://www.gnu.org/software/libc/manual/html_node/Input-Modes.html)
+[fd](https://blog.csdn.net/yushuaigee/article/details/107883964)
+[termios.h cdsn](https://blog.csdn.net/Flag_ing/article/details/125644852)
+[termios.h sourcecode](https://github.com/python/cpython/blob/main/Modules/termios.c#L293)
+[nlohmann](https://github.com/nlohmann/json)
+
+## wire shark filter
 
 ```log
 ftdi-ft && usb.dst == 2.5.2
