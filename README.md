@@ -11,7 +11,19 @@
 [nlohmann](https://github.com/nlohmann/json)
 
 <img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/8aef22f8-a385-4928-af59-5eacd1f712b1" />
+
+## prerequisite
+
+1. A linux machine with a USB port
+2. A USB to RS485 converter
+3. docker installed
+
 ## how to start
+
+1. spin up a influxdb with a auth token
+2. copy the `example.env` file and fill in your influxdb token and url and rename it `.env`
+3. plugin the USB to RS485 converter and make sure it matches `device` parameter in config.h otherwise it wont work
+4. build and start the docker container
 
 ```bash
 docker compose up -d --build --remove-orphans --force-recreate 
